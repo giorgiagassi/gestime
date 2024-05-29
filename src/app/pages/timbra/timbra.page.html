@@ -1,0 +1,88 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+
+    <ion-chip slot="end">
+      <ion-label>{{ user?.name }}</ion-label>
+      <ion-avatar>
+        <img alt="user" src="https://ionicframework.com/docs/img/demos/avatar.svg" />
+      </ion-avatar>
+    </ion-chip>
+
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+    <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
+      <ion-refresher-content pullingIcon="arrow-down" refreshingSpinner="circles">
+      </ion-refresher-content>
+    </ion-refresher>
+  <div class="container ion-page ion-padding-horizontal ion-padding-top" style="margin-top: 70%">
+    <ion-grid class="ion-justify-content-center ion-align-items-center" style="height: 100%;">
+      <ion-row class="ion-justify-content-center">
+        <ion-col *ngIf="canCheckIn">
+          <ion-button
+            [disabled]="!isNearLocation"
+            expand="full"
+            size="large"
+            color="success"
+            (click)="onCheckIn()"
+          >
+            <ion-icon slot="icon-only" name="enter" class="ion-padding"></ion-icon>Entrata
+          </ion-button>
+        </ion-col>
+        <ion-col *ngIf="canEndBreak">
+          <ion-button
+            [disabled]="!isNearLocation"
+            expand="full"
+            size="large"
+            color="danger"
+            (click)="onEndBreak()"
+          >
+            <ion-icon slot="icon-only" name="exit" class="ion-padding"></ion-icon>Uscita Pausa
+          </ion-button>
+        </ion-col>
+        <ion-col *ngIf="canStartBreak">
+          <ion-button
+            [disabled]="!isNearLocation"
+            expand="full"
+            size="large"
+            color="success"
+            (click)="onStartBreak()"
+          >
+            <ion-icon slot="icon-only" name="enter" class="ion-padding"></ion-icon>Entrata Pausa
+          </ion-button>
+        </ion-col>
+        <ion-col *ngIf="canCheckOut">
+          <ion-button
+            [disabled]="!isNearLocation"
+            expand="full"
+            size="large"
+            color="danger"
+            (click)="onCheckOut()"
+          >
+            <ion-icon slot="icon-only" name="exit" class="ion-padding"></ion-icon>Uscita
+          </ion-button>
+        </ion-col>
+      </ion-row>
+      <ion-row>
+        <ion-col>
+          <div *ngIf="timbrature.length > 0">
+            <ion-card *ngFor="let timbratura of timbrature">
+              <ion-card-header>
+                <ion-card-title>{{ timbratura.type }}</ion-card-title>
+              </ion-card-header>
+              <ion-card-content>
+                {{ timbratura.time | date:'short' }}
+              </ion-card-content>
+            </ion-card>
+          </div>
+          <ion-card *ngIf="timbrature.length === 0">
+            <ion-card-header>
+              <ion-card-title>Nessuna timbratura effettuata.</ion-card-title>
+            </ion-card-header>
+          </ion-card>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+  </div>
+</ion-content>

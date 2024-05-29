@@ -1,0 +1,31 @@
+<ion-content [fullscreen]="true">
+  <div class="container ion-page ion-padding-horizontal ion-padding-top">
+    <ion-grid class="ion-justify-content-center ion-align-items-center" style="height: 100%;">
+      <ion-row class="ion-justify-content-center">
+        <ion-col size-md="6" size-lg="4" size-xs="12" class="ion-align-self-center ion-text-center">
+          <img src="../../../assets/img/Logo.png" alt="GSP" class="ion-img">
+        </ion-col>
+        <ion-col size-md="6" size-lg="4" size-xs="12" class="ion-align-self-center ion-text-center">
+          <ion-input [(ngModel)]="userEmail" label="Email" label-placement="stacked" fill="outline" placeholder="Email" helperText="Inserisci una mail valida" errorText="Invalid email" type="email"></ion-input>
+        </ion-col>
+        <ion-col size-md="6" size-lg="4" size-xs="12" class="ion-align-self-center ion-text-center">
+          <ion-input [(ngModel)]="password" label="Password" label-placement="stacked" fill="outline" placeholder="Password" type="password">
+            <ion-input-password-toggle slot="end"></ion-input-password-toggle>
+          </ion-input>
+
+        </ion-col>
+        <ion-col size-md="6" size-lg="4" size-xs="12" class="ion-align-self-center ion-text-center">
+          <ion-item lines="none">
+            <ion-label>Ricordami</ion-label>
+            <ion-checkbox [(ngModel)]="rememberMe" slot="start"></ion-checkbox>
+          </ion-item>
+        </ion-col>
+        <ion-col size-md="6" size-lg="4" size-xs="12" class="ion-align-self-center ion-text-center">
+          <ion-button (click)="login()" class="pt-5">
+            <ion-icon name="person-circle-outline"></ion-icon>Accedi
+          </ion-button>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+  </div>
+</ion-content>

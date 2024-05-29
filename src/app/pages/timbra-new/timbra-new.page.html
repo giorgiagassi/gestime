@@ -1,0 +1,93 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-chip slot="end">
+      <ion-label>{{ user?.name }}</ion-label>
+      <ion-avatar>
+        <img alt="user" src="https://ionicframework.com/docs/img/demos/avatar.svg" />
+      </ion-avatar>
+    </ion-chip>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
+    <ion-refresher-content pullingIcon="arrow-down" refreshingSpinner="circles">
+    </ion-refresher-content>
+  </ion-refresher>
+
+  <div class="container ion-page ion-padding-horizontal ion-padding-top" style="margin-top: 70%">
+
+    <ion-grid class="ion-justify-content-center ion-align-items-center" style="height: 100%;">
+
+      <!-- ingresso -->
+      <ion-row class="ion-justify-content-center ion-align-items-center">
+        <ion-button id="open-action-sheet-ingresso" color="success" size="large"
+                    [disabled]="!isNearLocation || user?.checkInTime || !isLocationEnabled"
+                    (click)="onCheckIn()">Ingresso</ion-button>
+      </ion-row>
+
+      <!-- pausa pranzo -->
+      <ion-row class="ion-justify-content-center ion-align-items-center">
+        <ion-button id="open-action-sheet-pausa" color="secondary" size="large"
+                    [disabled]="!isNearLocation || !isLocationEnabled || isPausaPranzoDisabled()"
+        >Pausa Pranzo</ion-button>
+        <ion-action-sheet trigger="open-action-sheet-pausa" [buttons]="actionSheetButtonsPausa"
+                          (didDismiss)="handleActionSheetDismissPausa($event)"></ion-action-sheet>
+      </ion-row>
+
+
+      <!-- uscita -->
+      <ion-row class="ion-justify-content-center ion-align-items-center">
+        <ion-button id="open-action-sheet-uscita" color="danger" size="large"
+                    [disabled]="!isNearLocation || user?.checkOutTime || !isLocationEnabled"
+        >Uscita</ion-button>
+        <ion-action-sheet trigger="open-action-sheet-uscita" [buttons]="actionSheetButtonsUscita"
+                          (didDismiss)="handleActionSheetDismiss($event)"></ion-action-sheet>
+      </ion-row>
+
+      <ion-row class="ion-justify-content-center ion-align-items-center ion-padding">
+        <ion-button (click)="setOpen(true)" class="ion-float-end ion-padding">Riepilogo
+          <ion-icon slot="icon-only" name="eye"></ion-icon></ion-button>
+      </ion-row>
+    </ion-grid>
+
+  </div>
+</ion-content>
+
+<ion-modal [isOpen]="isModalOpen" (ionModalWillDismiss)="handleModalDismiss()">
+  <ng-template>
+    <ion-header>
+      <ion-toolbar>
+        <ion-title>Tot.Ore: {{getFormattedTotOre()}}</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="setOpen(false)"><ion-icon name="close"></ion-icon></ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content class="ion-padding">
+      <div *ngIf="timbrature.length > 0">
+        <ion-card *ngFor="let timbratura of timbrature">
+          <ion-card-header>
+            <ion-card-title>{{ timbratura.type }}</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            {{ timbratura.time | date:'dd/MM/yyyy HH:mm'}}
+          </ion-card-content>
+        </ion-card>
+        <ion-card *ngIf="user?.checkInTime && user?.checkOutTime && user?.checkOutTimePausa && user?.checkInTimePausa" color="tertiary">
+          <ion-card-header>
+            <ion-card-title>Totale Ore</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            {{ user.totOre }}
+          </ion-card-content>
+        </ion-card>
+      </div>
+      <ion-card *ngIf="timbrature.length === 0">
+        <ion-card-header>
+          <ion-card-title>Nessuna timbratura effettuata.</ion-card-title>
+        </ion-card-header>
+      </ion-card>
+    </ion-content>
+  </ng-template>
+</ion-modal>

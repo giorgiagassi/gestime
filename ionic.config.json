@@ -1,0 +1,7 @@
+{
+  "name": "GESTIME",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular"
+}
