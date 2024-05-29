@@ -22,15 +22,26 @@ export class AppComponent implements OnInit {
   }
 
   async ngOnInit() {
-    // await this.presentLoading(); // Mostra lo spinner
+    await this.presentLoading(); // Mostra lo spinner
 
     try {
       await this.checkLocationPermissions();
       await this.requestNotificationPermissions();
       this.scheduleNotifications();
       await this.loginService.checkAuthenticationStatus(); // Ensure this completes before navigating
+
       if (this.loginService.isAuthenticated()) {
-        this.router.navigate(['/timbra-new']);
+        const userId = this.loginService.user().id; // Prendi l'ID dell'utente
+        this.loginService.getuserData(userId).subscribe(
+          userData => {
+            this.loginService.setUser(userData); // Aggiorna i dati dell'utente nel servizio
+            this.router.navigate(['/timbra-new']);
+          },
+          error => {
+            console.error('Error fetching user data:', error);
+            this.router.navigate(['/home']);
+          }
+        );
       } else {
         this.router.navigate(['/home']);
       }
@@ -40,6 +51,7 @@ export class AppComponent implements OnInit {
       await this.dismissLoading(); // Nascondi lo spinner
     }
   }
+
   private async requestNotificationPermissions() {
     const result = await LocalNotifications.requestPermissions();
     if (result.display !== 'granted') {
@@ -55,7 +67,9 @@ export class AppComponent implements OnInit {
     });
     await alert.present();
     await alert.onDidDismiss();
-  }async scheduleNotifications() {
+  }
+
+  async scheduleNotifications() {
     const notifications = [
       { id: 1, title: 'Promemoria', body: 'Ricordati di fare il caffè', hour: 11, minute: 0 },
       { id: 2, title: 'Promemoria', body: 'Mo puoi scendere', hour: 11, minute: 5 },
@@ -96,7 +110,6 @@ export class AppComponent implements OnInit {
 
   initializeApp() {
     this.platform.ready().then(() => {
-      this.scheduleMidnightCleanup();
     });
   }
 
@@ -128,6 +141,7 @@ export class AppComponent implements OnInit {
       await this.dismissLoading(); // Nascondi lo spinner
     }
   }
+
   async showPermissionAlert() {
     const alert = await this.alertController.create({
       header: 'Permessi Geolocalizzazione',
@@ -137,6 +151,7 @@ export class AppComponent implements OnInit {
     await alert.present();
     await alert.onDidDismiss();
   }
+
   async presentLoading() {
     const loading = await this.loadingController.create({
       message: 'Caricamento...',
@@ -147,6 +162,7 @@ export class AppComponent implements OnInit {
   async dismissLoading() {
     await this.loadingController.dismiss();
   }
+
   async showLocationAlert() {
     const alert = await this.alertController.create({
       header: 'Permessi Geolocalizzazione',
@@ -166,26 +182,5 @@ export class AppComponent implements OnInit {
     await alert.present();
     await alert.onDidDismiss();
   }
-  private scheduleMidnightCleanup() {
-    const now = new Date();
-    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
-    const timeUntilMidnight = midnight.getTime() - now.getTime();
-    setTimeout(() => {
-      this.resetLocalStorageData();
-      this.scheduleMidnightCleanup();
-    }, timeUntilMidnight);
-  }
-  private async resetLocalStorageData() {
-    const user = this.loginService.user();
-    const defaultData = {
-      id: user?.id || '',
-      name: user?.name || '',
-      checkInTime: null,
-      checkOutTimePausa: null,
-      checkInTimePausa: null,
-      checkOutTime: null
-    };
-    localStorage.setItem('userData', JSON.stringify(defaultData));
-    this.loginService.setUser(defaultData);
-  }
+
 }

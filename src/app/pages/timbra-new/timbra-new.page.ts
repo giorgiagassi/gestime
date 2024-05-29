@@ -5,6 +5,7 @@ import {AlertService} from "../../providers/alert.service";
 import {Router} from "@angular/router";
 import {TimbraService} from "../../providers/timbra.service";
 import {Geolocation, PositionOptions} from "@capacitor/geolocation";
+import {LoginService} from "../../providers/login.service";
 
 @Component({
   selector: 'app-timbra-new',
@@ -64,7 +65,7 @@ export class TimbraNewPage implements OnInit {
     }
   ];
   isNearLocation: boolean = false;
-  targetLocation = { latitude: 40.9701101, longitude: 17.1134034 };
+  targetLocation = { latitude: 40.970163133756444, longitude: 17.113191914512015 };
   distanceThreshold = 30;
   timbrature: any[] = [];
   isLocationEnabled: boolean = true;
@@ -74,25 +75,38 @@ export class TimbraNewPage implements OnInit {
     private alertService: AlertService,
     private router: Router,
     private timbratureService: TimbraService,
-    private loadingController: LoadingController
+    private loadingController: LoadingController,
+    private loginService: LoginService
   ) { }
 
   async ngOnInit() {
     const navigation = this.router.getCurrentNavigation();
-    if (navigation && navigation.extras && navigation.extras.state && navigation.extras.state['user']) {
-      this.user = navigation.extras.state['user'];
+    if (navigation && navigation.extras && navigation.extras.state && navigation.extras.state['User']) {
+      this.user = navigation.extras.state['User'];
       console.log('User data loaded from navigation:', this.user);
     } else {
-      const userStringLocalStorage = localStorage.getItem('user');
-      if (userStringLocalStorage) {
-        this.user = JSON.parse(userStringLocalStorage);
+      const userId = localStorage.getItem('User') || sessionStorage.getItem('User');
+      if (userId) {
+        try {
+          const userData = await this.loginService.getuserData(userId).toPromise();
+          this.user = userData;
+          console.log('User data loaded from API:', this.user);
+        } catch (error) {
+          console.error('Failed to load user data from API:', error);
+          this.showAlert('Errore', 'Impossibile caricare i dati utente.');
+        }
       } else {
-        const { value } = await Storage.get({ key: 'user' });
+        const { value } = await Storage.get({ key: 'userId' });
         if (value) {
-          this.user = JSON.parse(value);
-          console.log('User data loaded from storage:', this.user);
+          try {
+            this.user = await this.loginService.getuserData(value).toPromise();
+            console.log('User data loaded from API:', this.user);
+          } catch (error) {
+            console.error('Failed to load user data from API:', error);
+            this.showAlert('Errore', 'Impossibile caricare i dati utente.');
+          }
         } else {
-          console.error('Failed to load user data');
+          console.error('Failed to load user ID');
           this.showAlert('Errore', 'Impossibile caricare i dati utente.');
         }
       }
@@ -102,7 +116,6 @@ export class TimbraNewPage implements OnInit {
     }
     await this.requestGeolocationPermission();
     this.checkCurrentLocation();
-
   }
 
   async doRefresh(event: any) {
@@ -279,10 +292,10 @@ export class TimbraNewPage implements OnInit {
         timbrature.push({ type: 'Entrata', time: this.user.checkInTime, order: 1 });
       }
       if (this.user.checkOutTimePausa) {
-        timbrature.push({ type: 'Uscita Pausa', time: this.user.checkOutTimePausa, order: 2 });
+        timbrature.push({ type: 'Inzio Pausa', time: this.user.checkOutTimePausa, order: 2 });
       }
       if (this.user.checkInTimePausa) {
-        timbrature.push({ type: 'Entrata Pausa', time: this.user.checkInTimePausa, order: 3 });
+        timbrature.push({ type: 'Fine Pausa', time: this.user.checkInTimePausa, order: 3 });
       }
       if (this.user.checkOutTime) {
         timbrature.push({ type: 'Uscita', time: this.user.checkOutTime, order: 4 });
@@ -309,7 +322,6 @@ export class TimbraNewPage implements OnInit {
       async (response) => {
         console.log('Entrata', response);
         this.user.checkInTime = new Date().toISOString();
-        await this.updateUserSessionData();
         this.timbrature = this.getUserTimbrature();
         this.updateActionSheetButtons();
         await this.dismissLoading(loading);
@@ -340,7 +352,6 @@ export class TimbraNewPage implements OnInit {
       async (response) => {
         console.log('Uscita', response);
         this.user.checkOutTime = new Date().toISOString();
-        await this.updateUserSessionData();
         this.timbrature = this.getUserTimbrature();
         this.updateActionSheetButtons();
         await this.dismissLoading(loading);
@@ -365,22 +376,19 @@ export class TimbraNewPage implements OnInit {
       return;
     }
 
-    const loading = await this.presentLoading('Registrando l\'entrata pausa...');
+    const loading = await this.presentLoading('Registrando Inzio pausa...');
 
     this.timbratureService.uscita(this.user.id).subscribe(
       async (response) => {
-        console.log('Entrata Pausa', response);
         this.user.checkOutTimePausa = new Date().toISOString();
-        await this.updateUserSessionData();
         this.timbrature = this.getUserTimbrature();
         this.updateActionSheetButtons();
         await this.dismissLoading(loading);
-        await this.alertService.presentSuccessAlert('Entrata Pausa registrata con successo');
+        await this.alertService.presentSuccessAlert('Inzio pausa registrata con successo');
       },
       async (error) => {
-        console.error('Errore Entrata Pausa', error);
         await this.dismissLoading(loading);
-        await this.alertService.presentErrorAlert('Errore durante la registrazione dell\'entrata pausa.');
+        await this.alertService.presentErrorAlert('Errore durante la registrazione di Inzio pausa.');
       }
     );
   }
@@ -397,7 +405,6 @@ export class TimbraNewPage implements OnInit {
       async (response) => {
         console.log('Fine Pausa', response);
         this.user.checkInTimePausa = new Date().toISOString();
-        await this.updateUserSessionData();
         this.timbrature = this.getUserTimbrature();
         this.updateActionSheetButtons();
         await this.dismissLoading(loading);
@@ -411,16 +418,7 @@ export class TimbraNewPage implements OnInit {
     );
   }
 
-  @HostListener('document:input', ['$event'])
-  handleInput(event: Event) {
-    this.updateUserSessionData();
-  }
 
-  async updateUserSessionData() {
-    const userString = JSON.stringify(this.user);
-    localStorage.setItem('user', userString); // Salva i dati dell'utente nel localStorage
-    console.log('User data updated in localStorage:', localStorage.getItem('user'));
-  }
 
   async handleActionSheetDismiss(event: any) {
     const role = event.detail.role;
@@ -498,9 +496,19 @@ export class TimbraNewPage implements OnInit {
     const currentTime = this.user.checkOutTime ? new Date(this.user.checkOutTime) : new Date();
     let diffMs = currentTime.getTime() - checkInTime.getTime();
 
-    // Sottrai un'ora se esistono gli orari della pausa
+    // Calcola la differenza tra checkOutTimePausa e checkInTimePausa
     if (this.user.checkOutTimePausa && this.user.checkInTimePausa) {
-      diffMs -= 60 * 60 * 1000; // Sottrai un'ora in millisecondi
+      const checkOutTimePausa = new Date(this.user.checkOutTimePausa);
+      const checkInTimePausa = new Date(this.user.checkInTimePausa);
+      let pausaDiffMs = checkInTimePausa.getTime() - checkOutTimePausa.getTime();
+
+      // Se la differenza è inferiore a un'ora, sottrai comunque un'ora
+      const oneHourMs = 60 * 60 * 1000;
+      if (pausaDiffMs < oneHourMs) {
+        pausaDiffMs = oneHourMs;
+      }
+
+      diffMs -= pausaDiffMs;
     }
 
     const hours = Math.floor(diffMs / (1000 * 60 * 60));
@@ -512,7 +520,6 @@ export class TimbraNewPage implements OnInit {
   padToTwo(number: number): string {
     return number <= 9 ? `0${number}` : `${number}`;
   }
-
   async handleModalDismiss() {
     this.isModalOpen = false;
   }
