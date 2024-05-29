@@ -16,6 +16,7 @@ export class AlertService {
     });
 
     await alert.present();
+    return await alert.onDidDismiss();
   }
 
   async presentSuccessAlert(message: string) {

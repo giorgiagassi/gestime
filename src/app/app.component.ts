@@ -1,9 +1,11 @@
 import { Component, OnInit } from '@angular/core';
-import { AlertController, LoadingController, Platform } from '@ionic/angular';
+import { Platform } from '@ionic/angular';
 import { Geolocation } from '@capacitor/geolocation';
 import { LocalNotifications, LocalNotificationSchema } from '@capacitor/local-notifications';
 import { LoginService } from './providers/login.service';
 import { Router } from '@angular/router';
+import { LoadingService } from './providers/loading.service';
+import { AlertService } from './providers/alert.service'; // Importa il servizio
 
 @Component({
   selector: 'app-root',
@@ -12,17 +14,16 @@ import { Router } from '@angular/router';
 })
 export class AppComponent implements OnInit {
   constructor(
-    private alertController: AlertController,
+    private alertService: AlertService, // Usa il servizio
     private loginService: LoginService,
     private platform: Platform,
     private router: Router,
-    private loadingController: LoadingController // Aggiungi questo
+    private loadingService: LoadingService // Usa il servizio
   ) {
     this.initializeApp();
   }
 
   async ngOnInit() {
-    await this.presentLoading(); // Mostra lo spinner
 
     try {
       await this.checkLocationPermissions();
@@ -47,26 +48,14 @@ export class AppComponent implements OnInit {
       }
     } catch (error) {
       console.error(error);
-    } finally {
-      await this.dismissLoading(); // Nascondi lo spinner
     }
   }
 
   private async requestNotificationPermissions() {
     const result = await LocalNotifications.requestPermissions();
     if (result.display !== 'granted') {
-      await this.showNotificationPermissionAlert();
+      await this.alertService.presentErrorAlert('È necessario concedere il permesso per le notifiche per utilizzare l\'applicazione correttamente.');
     }
-  }
-
-  async showNotificationPermissionAlert() {
-    const alert = await this.alertController.create({
-      header: 'Permessi Notifiche',
-      message: 'È necessario concedere il permesso per le notifiche per utilizzare l\'applicazione correttamente.',
-      buttons: ['OK']
-    });
-    await alert.present();
-    await alert.onDidDismiss();
   }
 
   async scheduleNotifications() {
@@ -114,12 +103,11 @@ export class AppComponent implements OnInit {
   }
 
   private async checkLocationPermissions() {
-    await this.presentLoading(); // Mostra lo spinner
 
     try {
       let permissions = await Geolocation.checkPermissions();
       while (permissions.location !== 'granted') {
-        await this.showPermissionAlert();
+        await this.alertService.presentErrorAlert("L'app ha bisogno della geolocalizzazione per funzionare.");
         await Geolocation.requestPermissions();
         permissions = await Geolocation.checkPermissions();
         if (permissions.location === 'granted') {
@@ -127,60 +115,16 @@ export class AppComponent implements OnInit {
             await Geolocation.getCurrentPosition();
             break;
           } catch (e) {
-            await this.showLocationServiceAlert();
+            await this.alertService.presentErrorAlert('Il servizio di geolocalizzazione non è attivo. Per favore, attiva la geolocalizzazione per continuare.');
             break;
           }
         }
       }
       if (permissions.location !== 'granted') {
-        await this.showLocationAlert();
+        await this.alertService.presentErrorAlert("Permessi di geolocalizzazione non concessi. L'app non può funzionare correttamente.");
       }
     } catch (error) {
       console.error(error);
-    } finally {
-      await this.dismissLoading(); // Nascondi lo spinner
     }
   }
-
-  async showPermissionAlert() {
-    const alert = await this.alertController.create({
-      header: 'Permessi Geolocalizzazione',
-      message: "L'app ha bisogno della geolocalizzazione per funzionare.",
-      buttons: ['OK']
-    });
-    await alert.present();
-    await alert.onDidDismiss();
-  }
-
-  async presentLoading() {
-    const loading = await this.loadingController.create({
-      message: 'Caricamento...',
-    });
-    await loading.present();
-  }
-
-  async dismissLoading() {
-    await this.loadingController.dismiss();
-  }
-
-  async showLocationAlert() {
-    const alert = await this.alertController.create({
-      header: 'Permessi Geolocalizzazione',
-      message: "Permessi di geolocalizzazione non concessi. L'app non può funzionare correttamente.",
-      buttons: ['OK']
-    });
-    await alert.present();
-    await alert.onDidDismiss();
-  }
-
-  async showLocationServiceAlert() {
-    const alert = await this.alertController.create({
-      header: 'Servizio Geolocalizzazione',
-      message: "Il servizio di geolocalizzazione non è attivo. Per favore, attiva la geolocalizzazione per continuare.",
-      buttons: ['OK']
-    });
-    await alert.present();
-    await alert.onDidDismiss();
-  }
-
 }

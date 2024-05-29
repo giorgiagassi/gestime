@@ -3,6 +3,8 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, throwError } from "rxjs";
 import { catchError, map } from "rxjs/operators";
+import { NativeBiometric } from 'capacitor-native-biometric';
+import { AlertController } from '@ionic/angular';
 
 @Injectable({
   providedIn: 'root'
@@ -13,7 +15,11 @@ export class LoginService {
   private _isAuthenticated = signal<boolean>(false);
   private _user = signal<any>(null);
 
-  constructor(private httpClient: HttpClient, private router: Router) {}
+  constructor(
+    private httpClient: HttpClient,
+    private router: Router,
+    private alertController: AlertController
+  ) {}
 
   get isAuthenticated() {
     return this._isAuthenticated.asReadonly();
@@ -23,7 +29,7 @@ export class LoginService {
     return this._user.asReadonly();
   }
 
-  async login(userEmail: string, password: string, rememberMe: boolean): Promise<any> {
+  async login(userEmail: string, password: string, rememberMe: boolean, enableBiometrics: boolean): Promise<any> {
     const loginData = {
       UserEmail: userEmail,
       Password: password,
@@ -48,6 +54,13 @@ export class LoginService {
 
         if (responseData && responseData.id) {
           await this.setSession(responseData.id, rememberMe);
+
+          // Abilita l'autenticazione biometrica se la checkbox è selezionata
+          if (enableBiometrics) {
+            await this.storeBiometricCredentials(userEmail, password);
+            localStorage.setItem('BiometricsEnabled', 'true');
+          }
+
           return responseData;
         } else {
           console.error('Invalid response format: User data not found');
@@ -72,12 +85,16 @@ export class LoginService {
       localStorage.setItem('User', userId); // Save user ID to localStorage
       localStorage.setItem('RememberMe', 'true'); // Save remember me status to localStorage
       console.log('User ID and Remember Me status saved in localStorage:', userId);
+    } else {
+      sessionStorage.setItem('User', userId); // Save user ID to sessionStorage
+      sessionStorage.setItem('RememberMe', 'false'); // Save remember me status to sessionStorage
+      console.log('User ID saved in sessionStorage:', userId);
     }
   }
 
   async checkAuthenticationStatus() {
     const rememberMe = localStorage.getItem('RememberMe') === 'true';
-    const userId = rememberMe ? localStorage.getItem('User') : null;
+    const userId = rememberMe ? localStorage.getItem('User') : sessionStorage.getItem('User');
     console.log('User ID from storage:', userId);
     if (userId) {
       try {
@@ -92,6 +109,18 @@ export class LoginService {
     } else {
       this._isAuthenticated.set(false);
       this._user.set(null);
+    }
+  }
+
+  async storeBiometricCredentials(username: string, password: string): Promise<void> {
+    try {
+      await NativeBiometric.setCredentials({
+        username: username,
+        password: password,
+        server: "www.gestime.it"
+      });
+    } catch (e) {
+      console.error('Failed to store biometric credentials', e);
     }
   }
 

@@ -34,6 +34,7 @@
     "@capacitor/storage": "^1.2.5",
     "@ionic-native/core": "^5.36.0",
     "@ionic-native/local-notifications": "^5.36.0",
+    "capacitor-native-biometric": "^4.2.2",
     "@ionic/angular": "^8.0.0",
     "ionicons": "^7.1.0",
     "rxjs": "6.6.7",

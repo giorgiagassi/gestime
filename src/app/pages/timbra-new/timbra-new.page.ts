@@ -1,11 +1,11 @@
 import {Component, HostListener, OnInit} from '@angular/core';
 import {Storage} from "@capacitor/storage";
-import {AlertController, LoadingController} from "@ionic/angular";
 import {AlertService} from "../../providers/alert.service";
 import {Router} from "@angular/router";
 import {TimbraService} from "../../providers/timbra.service";
 import {Geolocation, PositionOptions} from "@capacitor/geolocation";
 import {LoginService} from "../../providers/login.service";
+import { LoadingService } from '../../providers/loading.service'; // Importa il servizio
 
 @Component({
   selector: 'app-timbra-new',
@@ -71,11 +71,10 @@ export class TimbraNewPage implements OnInit {
   isLocationEnabled: boolean = true;
 
   constructor(
-    private alertController: AlertController,
-    private alertService: AlertService,
+    private alertService: AlertService, // Usa il servizio
     private router: Router,
     private timbratureService: TimbraService,
-    private loadingController: LoadingController,
+    private loadingService: LoadingService, // Usa il servizio
     private loginService: LoginService
   ) { }
 
@@ -93,7 +92,7 @@ export class TimbraNewPage implements OnInit {
           console.log('User data loaded from API:', this.user);
         } catch (error) {
           console.error('Failed to load user data from API:', error);
-          this.showAlert('Errore', 'Impossibile caricare i dati utente.');
+          await this.alertService.presentErrorAlert('Impossibile caricare i dati utente.');
         }
       } else {
         const { value } = await Storage.get({ key: 'userId' });
@@ -103,11 +102,11 @@ export class TimbraNewPage implements OnInit {
             console.log('User data loaded from API:', this.user);
           } catch (error) {
             console.error('Failed to load user data from API:', error);
-            this.showAlert('Errore', 'Impossibile caricare i dati utente.');
+            await this.alertService.presentErrorAlert('Impossibile caricare i dati utente.');
           }
         } else {
           console.error('Failed to load user ID');
-          this.showAlert('Errore', 'Impossibile caricare i dati utente.');
+          await this.alertService.presentErrorAlert('Impossibile caricare i dati utente.');
         }
       }
     }
@@ -123,16 +122,6 @@ export class TimbraNewPage implements OnInit {
     event.target.complete();
   }
 
-  async showAlert(header: string, message: string) {
-    const alert = await this.alertController.create({
-      header: header,
-      message: message,
-      buttons: ['OK']
-    });
-
-    await alert.present();
-  }
-
   async ensureLocationEnabled(): Promise<boolean> {
     const options: PositionOptions = {
       enableHighAccuracy: true,
@@ -145,7 +134,7 @@ export class TimbraNewPage implements OnInit {
       if (hasPermission.location !== 'granted') {
         const requestPermission = await Geolocation.requestPermissions();
         if (requestPermission.location !== 'granted') {
-          this.showAlert('Permesso Negato', 'Impossibile ottenere la posizione. Assicurati di avere i permessi necessari.');
+          await this.alertService.presentErrorAlert('Impossibile ottenere la posizione. Assicurati di avere i permessi necessari.');
           return false;
         }
       }
@@ -161,53 +150,44 @@ export class TimbraNewPage implements OnInit {
       if (distance <= this.distanceThreshold) {
         return true;
       } else {
-        this.showAlert('Troppo distante', 'Sei troppo lontano dalla posizione richiesta.');
+        await this.alertService.presentErrorAlert('Sei troppo lontano dalla posizione richiesta.');
         return false;
       }
     } catch (error) {
-      this.showAlert('Errore di geolocalizzazione', 'Impossibile ottenere la posizione. Assicurati che la geolocalizzazione sia attiva e riprova.');
+      await this.alertService.presentErrorAlert('Impossibile ottenere la posizione. Assicurati che la geolocalizzazione sia attiva e riprova.');
       await this.promptEnableLocation();
       return false;
     }
   }
 
   async promptEnableLocation() {
-    const alert = await this.alertController.create({
-      header: 'Attiva Geolocalizzazione',
-      message: 'La geolocalizzazione non è attiva. Vuoi attivarla adesso?',
-      buttons: [
-        {
-          text: 'No',
-          role: 'cancel',
-          handler: () => {
-            console.log('Geolocalizzazione non attivata');
-            this.isLocationEnabled = false;
-          }
-        },
-        {
-          text: 'Sì',
-          handler: async () => {
-            await this.openLocationSettings();
-            const loading = await this.presentLoading('Caricamento...');
-            setTimeout(async () => {
-              await this.dismissLoading(loading);
-              const isNear = await this.checkDistance();
-              this.isLocationEnabled = isNear;
-            }, 5000);
-          }
-        }
-      ]
-    });
-    await alert.present();
+    const alert = await this.alertService.presentAlert(
+      'Attiva Geolocalizzazione',
+      'La geolocalizzazione non è attiva. Vuoi attivarla adesso?',
+      ['No', 'Sì']
+    );
+
+    if (alert.role === 'cancel') {
+      console.log('Geolocalizzazione non attivata');
+      this.isLocationEnabled = false;
+      return;
+    }
+
+    await this.openLocationSettings();
+    await this.loadingService.presentLoading('Caricamento...');
+    setTimeout(async () => {
+      await this.loadingService.dismissLoading();
+      const isNear = await this.checkDistance();
+      this.isLocationEnabled = isNear;
+    }, 5000);
   }
 
   async openLocationSettings() {
-    const alert = await this.alertController.create({
-      header: 'Istruzioni',
-      message: 'Per favore, vai nelle impostazioni del dispositivo e attiva la geolocalizzazione.',
-      buttons: ['OK']
-    });
-    await alert.present();
+    await this.alertService.presentAlert(
+      'Istruzioni',
+      'Per favore, vai nelle impostazioni del dispositivo e attiva la geolocalizzazione.',
+      ['OK']
+    );
   }
 
   async checkDistance() {
@@ -222,7 +202,7 @@ export class TimbraNewPage implements OnInit {
 
       return distance <= this.distanceThreshold;
     } catch (error) {
-      this.showAlert('Errore di geolocalizzazione', 'Impossibile ottenere la posizione. Assicurati che la geolocalizzazione sia attiva e riprova.');
+      await this.alertService.presentErrorAlert('Impossibile ottenere la posizione. Assicurati che la geolocalizzazione sia attiva e riprova.');
       return false;
     }
   }
@@ -239,11 +219,11 @@ export class TimbraNewPage implements OnInit {
       if (hasPermission.location !== 'granted') {
         const requestPermission = await Geolocation.requestPermissions();
         if (requestPermission.location !== 'granted') {
-          this.showAlert('Permesso Negato', 'Impossibile ottenere la posizione. Assicurati di avere i permessi necessari.');
+          await this.alertService.presentErrorAlert('Impossibile ottenere la posizione. Assicurati di avere i permessi necessari.');
         }
       }
     } catch (error) {
-      this.showAlert('Errore di Permesso', 'Errore durante la richiesta dei permessi di geolocalizzazione.');
+      await this.alertService.presentErrorAlert('Errore durante la richiesta dei permessi di geolocalizzazione.');
     }
   }
 
@@ -260,10 +240,10 @@ export class TimbraNewPage implements OnInit {
       this.isNearLocation = distance <= this.distanceThreshold;
 
       if (!this.isNearLocation) {
-        this.showAlert('Troppo distante', 'Sei troppo lontano dalla posizione richiesta.');
+        await this.alertService.presentErrorAlert('Sei troppo lontano dalla posizione richiesta.');
       }
     } catch (error) {
-      this.showAlert('Errore di geolocalizzazione', 'Impossibile ottenere la posizione. Assicurati che la geolocalizzazione sia attiva e riprova.');
+      await this.alertService.presentErrorAlert('Impossibile ottenere la posizione. Assicurati che la geolocalizzazione sia attiva e riprova.');
       await this.promptEnableLocation();
     }
   }
@@ -316,7 +296,7 @@ export class TimbraNewPage implements OnInit {
       return;
     }
 
-    const loading = await this.presentLoading('Registrando l\'entrata...');
+    await this.loadingService.presentLoading('Registrando l\'entrata...');
 
     this.timbratureService.entrata(this.user.id).subscribe(
       async (response) => {
@@ -324,12 +304,12 @@ export class TimbraNewPage implements OnInit {
         this.user.checkInTime = new Date().toISOString();
         this.timbrature = this.getUserTimbrature();
         this.updateActionSheetButtons();
-        await this.dismissLoading(loading);
+        await this.loadingService.dismissLoading();
         await this.alertService.presentSuccessAlert('Entrata registrata con successo');
       },
       async (error) => {
         console.error('Errore Entrata', error);
-        await this.dismissLoading(loading);
+        await this.loadingService.dismissLoading();
         await this.alertService.presentErrorAlert('Errore durante la registrazione dell\'entrata.');
       }
     );
@@ -346,7 +326,7 @@ export class TimbraNewPage implements OnInit {
       return;
     }
 
-    const loading = await this.presentLoading('Registrando l\'uscita...');
+    await this.loadingService.presentLoading('Registrando l\'uscita...');
 
     this.timbratureService.uscita(this.user.id).subscribe(
       async (response) => {
@@ -354,12 +334,12 @@ export class TimbraNewPage implements OnInit {
         this.user.checkOutTime = new Date().toISOString();
         this.timbrature = this.getUserTimbrature();
         this.updateActionSheetButtons();
-        await this.dismissLoading(loading);
+        await this.loadingService.dismissLoading();
         await this.alertService.presentSuccessAlert('Uscita registrata con successo');
       },
       async (error) => {
         console.error('Errore Uscita', error);
-        await this.dismissLoading(loading);
+        await this.loadingService.dismissLoading();
         await this.alertService.presentErrorAlert('Errore durante la registrazione dell\'uscita.');
       }
     );
@@ -376,19 +356,19 @@ export class TimbraNewPage implements OnInit {
       return;
     }
 
-    const loading = await this.presentLoading('Registrando Inzio pausa...');
+    await this.loadingService.presentLoading('Registrando Inizio pausa...');
 
     this.timbratureService.uscita(this.user.id).subscribe(
       async (response) => {
         this.user.checkOutTimePausa = new Date().toISOString();
         this.timbrature = this.getUserTimbrature();
-        this.updateActionSheetButtons();
-        await this.dismissLoading(loading);
-        await this.alertService.presentSuccessAlert('Inzio pausa registrata con successo');
+        this.updateActionSheetButtons(); // Aggiorna i pulsanti
+        await this.loadingService.dismissLoading();
+        await this.alertService.presentSuccessAlert('Inizio pausa registrata con successo');
       },
       async (error) => {
-        await this.dismissLoading(loading);
-        await this.alertService.presentErrorAlert('Errore durante la registrazione di Inzio pausa.');
+        await this.loadingService.dismissLoading();
+        await this.alertService.presentErrorAlert('Errore durante la registrazione di Inizio pausa.');
       }
     );
   }
@@ -399,26 +379,24 @@ export class TimbraNewPage implements OnInit {
       return;
     }
 
-    const loading = await this.presentLoading('Registrando la fine pausa...');
+    await this.loadingService.presentLoading('Registrando la fine pausa...');
 
     this.timbratureService.entrata(this.user.id).subscribe(
       async (response) => {
         console.log('Fine Pausa', response);
         this.user.checkInTimePausa = new Date().toISOString();
         this.timbrature = this.getUserTimbrature();
-        this.updateActionSheetButtons();
-        await this.dismissLoading(loading);
+        this.updateActionSheetButtons(); // Aggiorna i pulsanti
+        await this.loadingService.dismissLoading();
         await this.alertService.presentSuccessAlert('Fine Pausa registrata con successo');
       },
       async (error) => {
         console.error('Errore Fine Pausa', error);
-        await this.dismissLoading(loading);
+        await this.loadingService.dismissLoading();
         await this.alertService.presentErrorAlert('Errore durante la registrazione della fine pausa.');
       }
     );
   }
-
-
 
   async handleActionSheetDismiss(event: any) {
     const role = event.detail.role;
@@ -462,29 +440,18 @@ export class TimbraNewPage implements OnInit {
   }
 
   isInizioPausaDisabled(): boolean {
-    return !!this.user?.checkOutTimePausa;
+    return !!this.user?.checkOutTimePausa && !this.user?.checkInTimePausa;
   }
 
   isFinePausaDisabled(): boolean {
-    return !this.user?.checkOutTimePausa;
+    return !this.user?.checkOutTimePausa || !!this.user?.checkInTimePausa;
   }
+
 
   isModalOpen = false;
 
   setOpen(isOpen: boolean) {
     this.isModalOpen = isOpen;
-  }
-
-  async presentLoading(message: string) {
-    const loading = await this.loadingController.create({
-      message: message,
-    });
-    await loading.present();
-    return loading;
-  }
-
-  async dismissLoading(loading: any) {
-    await loading.dismiss();
   }
 
   getFormattedTotOre(): string {
@@ -520,6 +487,7 @@ export class TimbraNewPage implements OnInit {
   padToTwo(number: number): string {
     return number <= 9 ? `0${number}` : `${number}`;
   }
+
   async handleModalDismiss() {
     this.isModalOpen = false;
   }
