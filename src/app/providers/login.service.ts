@@ -1,9 +1,8 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Storage } from '@capacitor/storage';
-import {Observable, throwError} from "rxjs";
-import {catchError, map} from "rxjs/operators";
+import { Observable, throwError } from "rxjs";
+import { catchError, map } from "rxjs/operators";
 
 @Injectable({
   providedIn: 'root'
@@ -48,7 +47,7 @@ export class LoginService {
         }
 
         if (responseData && responseData.id) {
-          await this.setSession(responseData, rememberMe);
+          await this.setSession(responseData.id, rememberMe);
           return responseData;
         } else {
           console.error('Invalid response format: User data not found');
@@ -64,53 +63,41 @@ export class LoginService {
     });
   }
 
-  private async setSession(user: any, rememberMe: boolean) {
+  private async setSession(userId: string, rememberMe: boolean) {
     this._isAuthenticated.set(true);
-    this._user.set(user);
+    this._user.set({ id: userId });
 
-    const userId = user.id; // Extract user ID
     console.log('Saving user ID:', userId, 'Remember me:', rememberMe);
     if (rememberMe) {
       localStorage.setItem('User', userId); // Save user ID to localStorage
-      console.log('User ID saved in localStorage:', userId);
-    } else {
-      sessionStorage.setItem('User', userId);
-      console.log('User ID saved in sessionStorage:', userId);
+      localStorage.setItem('RememberMe', 'true'); // Save remember me status to localStorage
+      console.log('User ID and Remember Me status saved in localStorage:', userId);
     }
   }
 
   async checkAuthenticationStatus() {
-    const userStringLocalStorage = localStorage.getItem('User');
-    console.log('User from localStorage:', userStringLocalStorage);
-    if (userStringLocalStorage) {
-      const user = JSON.parse(userStringLocalStorage); // Deserialize the full user object
-      this._isAuthenticated.set(true);
-      this._user.set(user);
-    } else {
-      const userId = sessionStorage.getItem('User');
-      console.log('User ID from sessionStorage:', userId);
-      if (userId) {
-        const { value: userString } = await Storage.get({ key: 'User' });
-        console.log('User from Capacitor Storage:', userString);
-        if (userString) {
-          const user = JSON.parse(userString); // Deserialize the full user object
-          this._isAuthenticated.set(true);
-          this._user.set(user);
-        } else {
-          this._isAuthenticated.set(false);
-          this._user.set(null);
-        }
-      } else {
+    const rememberMe = localStorage.getItem('RememberMe') === 'true';
+    const userId = rememberMe ? localStorage.getItem('User') : null;
+    console.log('User ID from storage:', userId);
+    if (userId) {
+      try {
+        const user = await this.getuserData(userId).toPromise();
+        this._isAuthenticated.set(true);
+        this._user.set(user);
+      } catch (error) {
+        console.error('Failed to load user data from API:', error);
         this._isAuthenticated.set(false);
         this._user.set(null);
       }
+    } else {
+      this._isAuthenticated.set(false);
+      this._user.set(null);
     }
   }
 
   setUser(user: any) {
     this._user.set(user);
   }
-
 
   getuserData(userId: string): Observable<any> {
     const headers = { 'Content-Type': 'application/json', 'User': userId };
@@ -125,8 +112,8 @@ export class LoginService {
         }),
         catchError(this.handleError)
       );
-
   }
+
   private handleError(error: any) {
     let errorMessage = '';
     if (error.error instanceof ErrorEvent) {
