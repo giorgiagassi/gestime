@@ -19,6 +19,10 @@ const routes: Routes = [
     path: 'timbra-new',
     loadChildren: () => import('./pages/timbra-new/timbra-new.module').then(m => m.TimbraNewPageModule)
   },
+  {
+    path: 'notifiche',
+    loadChildren: () => import('./pages/notifiche/notifiche.module').then( m => m.NotifichePageModule)
+  },
 ];
 
 @NgModule({

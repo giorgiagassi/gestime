@@ -1,5 +1,9 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
+    <ion-button shape="round" slot="start" (click)="setOpenNotifiche(true)" fill="clear">
+      <ion-icon slot="icon-only" name="notifications"></ion-icon>
+      <ion-badge *ngIf="unreadNotificationsCount > 0" color="danger">{{ unreadNotificationsCount }}</ion-badge>
+    </ion-button>
     <ion-chip slot="end">
       <ion-label>{{ user?.name }}</ion-label>
       <ion-avatar>
@@ -89,5 +93,19 @@
         </ion-card-header>
       </ion-card>
     </ion-content>
+  </ng-template>
+</ion-modal>
+
+<ion-modal [isOpen]="isModalOpenNotifiche" (ionModalWillDismiss)="handleModalDismissNotifiche()">
+  <ng-template>
+    <ion-header>
+      <ion-toolbar>
+        <ion-title>Notifiche</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="setOpenNotifiche(false)"><ion-icon name="close"></ion-icon></ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+    <app-notifiche></app-notifiche>
   </ng-template>
 </ion-modal>

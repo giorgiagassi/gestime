@@ -5,7 +5,8 @@ import {Router} from "@angular/router";
 import {TimbraService} from "../../providers/timbra.service";
 import {Geolocation, PositionOptions} from "@capacitor/geolocation";
 import {LoginService} from "../../providers/login.service";
-import { LoadingService } from '../../providers/loading.service'; // Importa il servizio
+import { LoadingService } from '../../providers/loading.service';
+import {NotificationService} from "../../providers/notification.service"; // Importa il servizio
 
 @Component({
   selector: 'app-timbra-new',
@@ -69,13 +70,15 @@ export class TimbraNewPage implements OnInit {
   distanceThreshold = 30;
   timbrature: any[] = [];
   isLocationEnabled: boolean = true;
+  unreadNotificationsCount: number = 0;
 
   constructor(
     private alertService: AlertService, // Usa il servizio
     private router: Router,
     private timbratureService: TimbraService,
     private loadingService: LoadingService, // Usa il servizio
-    private loginService: LoginService
+    private loginService: LoginService,
+    private notificationService: NotificationService
   ) { }
 
   async ngOnInit() {
@@ -90,6 +93,13 @@ export class TimbraNewPage implements OnInit {
           const userData = await this.loginService.getuserData(userId).toPromise();
           this.user = userData;
           console.log('User data loaded from API:', this.user);
+          // Calcola il numero di notifiche non lette all'avvio dell'applicazione
+          this.unreadNotificationsCount = this.notificationService.getUnreadNotificationsCount();
+
+          // Ascolta i cambiamenti nelle notifiche per aggiornare il conteggio delle notifiche non lette
+          this.notificationService.notificationsChanged.subscribe(() => {
+            this.unreadNotificationsCount = this.notificationService.getUnreadNotificationsCount();
+          });
         } catch (error) {
           console.error('Failed to load user data from API:', error);
           await this.alertService.presentErrorAlert('Impossibile caricare i dati utente.');
@@ -454,6 +464,12 @@ export class TimbraNewPage implements OnInit {
     this.isModalOpen = isOpen;
   }
 
+  isModalOpenNotifiche = false;
+
+  setOpenNotifiche(isOpen: boolean) {
+    this.isModalOpenNotifiche = isOpen;
+  }
+
   getFormattedTotOre(): string {
     if (!this.user?.checkInTime) {
       return '';
@@ -491,9 +507,15 @@ export class TimbraNewPage implements OnInit {
   async handleModalDismiss() {
     this.isModalOpen = false;
   }
+  async handleModalDismissNotifiche() {
+    this.isModalOpenNotifiche = false;
+  }
 
   isPausaPranzoDisabled(): boolean {
     return !!this.user?.checkOutTimePausa && !!this.user?.checkInTimePausa;
   }
-
+  // Aggiorna la variabile quando il numero di notifiche non lette cambia
+  updateUnreadNotificationsCount() {
+    this.unreadNotificationsCount = this.notificationService.getUnreadNotificationsCount();
+  }
 }

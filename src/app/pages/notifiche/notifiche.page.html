@@ -1,0 +1,12 @@
+
+<ion-content>
+  <ion-list>
+    <ion-item *ngFor="let notification of notifications">
+      <ion-label>
+        <h2>{{ notification.title }}</h2>
+        <p>{{ notification.body }}</p>
+        <p>{{ notification.schedule!.at | date: 'short' }}</p>
+      </ion-label>
+    </ion-item>
+  </ion-list>
+</ion-content>

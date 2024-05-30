@@ -5,7 +5,8 @@ import { LocalNotifications, LocalNotificationSchema } from '@capacitor/local-no
 import { LoginService } from './providers/login.service';
 import { Router } from '@angular/router';
 import { LoadingService } from './providers/loading.service';
-import { AlertService } from './providers/alert.service'; // Importa il servizio
+import { AlertService } from './providers/alert.service';
+import {CustomNotification, NotificationService} from "./providers/notification.service"; // Importa il servizio
 
 @Component({
   selector: 'app-root',
@@ -18,7 +19,7 @@ export class AppComponent implements OnInit {
     private loginService: LoginService,
     private platform: Platform,
     private router: Router,
-    private loadingService: LoadingService // Usa il servizio
+    private notificationService: NotificationService
   ) {
     this.initializeApp();
   }
@@ -46,6 +47,17 @@ export class AppComponent implements OnInit {
       } else {
         this.router.navigate(['/home']);
       }
+      // Listen for notification events
+      LocalNotifications.addListener('localNotificationReceived', (notification: LocalNotificationSchema) => {
+        // Effettua un cast dell'oggetto notification al tipo CustomNotification
+        const customNotification: CustomNotification = {
+          ...notification,
+          read: false // Imposta la proprietà read a false
+        };
+        this.notificationService.addNotification(customNotification);
+        console.log('Notification received:', customNotification);
+      });
+
     } catch (error) {
       console.error(error);
     }
