@@ -55,14 +55,13 @@ export class TimbraNewPage implements OnInit {
       data: {
         action: 'inizio_pausa',
       },
-      disabled: this.isInizioPausaDisabled()
     },
     {
       text: 'Fine Pausa',
       data: {
         action: 'fine_pausa',
       },
-      disabled: this.isFinePausaDisabled()
+
     }
   ];
   isNearLocation: boolean = false;
@@ -313,7 +312,6 @@ export class TimbraNewPage implements OnInit {
         console.log('Entrata', response);
         this.user.checkInTime = new Date().toISOString();
         this.timbrature = this.getUserTimbrature();
-        this.updateActionSheetButtons();
         await this.loadingService.dismissLoading();
         await this.alertService.presentSuccessAlert('Entrata registrata con successo');
       },
@@ -343,8 +341,7 @@ export class TimbraNewPage implements OnInit {
         console.log('Uscita', response);
         this.user.checkOutTime = new Date().toISOString();
         this.timbrature = this.getUserTimbrature();
-        this.updateActionSheetButtons();
-        await this.loadingService.dismissLoading();
+            await this.loadingService.dismissLoading();
         await this.alertService.presentSuccessAlert('Uscita registrata con successo');
       },
       async (error) => {
@@ -372,13 +369,12 @@ export class TimbraNewPage implements OnInit {
       async (response) => {
         this.user.checkOutTimePausa = new Date().toISOString();
         this.timbrature = this.getUserTimbrature();
-        this.updateActionSheetButtons(); // Aggiorna i pulsanti
         await this.loadingService.dismissLoading();
         await this.alertService.presentSuccessAlert('Inizio pausa registrata con successo');
       },
       async (error) => {
         await this.loadingService.dismissLoading();
-        await this.alertService.presentErrorAlert('Errore durante la registrazione di Inizio pausa.');
+        await this.alertService.presentErrorAlert(error.message);
       }
     );
   }
@@ -396,14 +392,13 @@ export class TimbraNewPage implements OnInit {
         console.log('Fine Pausa', response);
         this.user.checkInTimePausa = new Date().toISOString();
         this.timbrature = this.getUserTimbrature();
-        this.updateActionSheetButtons(); // Aggiorna i pulsanti
         await this.loadingService.dismissLoading();
         await this.alertService.presentSuccessAlert('Fine Pausa registrata con successo');
       },
       async (error) => {
         console.error('Errore Fine Pausa', error);
         await this.loadingService.dismissLoading();
-        await this.alertService.presentErrorAlert('Errore durante la registrazione della fine pausa.');
+        await this.alertService.presentErrorAlert(error.message);
       }
     );
   }
@@ -429,25 +424,6 @@ export class TimbraNewPage implements OnInit {
     }
   }
 
-  updateActionSheetButtons() {
-    this.actionSheetButtonsPausa = [
-      {
-        text: 'Inizio Pausa',
-        role: 'destructive',
-        data: {
-          action: 'inizio_pausa',
-        },
-        disabled: this.isInizioPausaDisabled()
-      },
-      {
-        text: 'Fine Pausa',
-        data: {
-          action: 'fine_pausa',
-        },
-        disabled: this.isFinePausaDisabled()
-      }
-    ];
-  }
 
   isInizioPausaDisabled(): boolean {
     return !!this.user?.checkOutTimePausa && !this.user?.checkInTimePausa;

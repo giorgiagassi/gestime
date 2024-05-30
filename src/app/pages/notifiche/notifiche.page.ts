@@ -14,6 +14,7 @@ export class NotifichePage implements OnInit {
 
   ngOnInit() {
     this.notifications = this.notificationService.getNotifications();
+    console.log(this.notifications, 'Notifications');
   }
 
 }

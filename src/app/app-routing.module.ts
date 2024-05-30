@@ -12,10 +12,6 @@ const routes: Routes = [
     pathMatch: 'full'
   },
   {
-    path: 'timbra',
-    loadChildren: () => import('./pages/timbra/timbra.module').then(m => m.TimbraPageModule)
-  },
-  {
     path: 'timbra-new',
     loadChildren: () => import('./pages/timbra-new/timbra-new.module').then(m => m.TimbraNewPageModule)
   },
